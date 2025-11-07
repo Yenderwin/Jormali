@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Heart</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sacramento&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Using HSL for easier color manipulation in JavaScript */
+            --heart-hue: 340;
+            --heart-saturation: 85%;
+            --heart-lightness: 55%;
+        }
+
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #1a0008;
+            perspective: 1000px;
+            overflow: hidden;
+        }
+
+        .scene {
+            position: relative;
+            transform-style: preserve-3d;
+            width: 200px;
+            height: 200px;
+            transition: transform 0.1s ease-out;
+            cursor: grab;
+        }
+
+        .scene:active {
+            cursor: grabbing;
+        }
+        
+        .heart-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transform-style: preserve-3d;
+            transform: translateY(25px); /* Adjust vertical position of heart */
+        }
+
+        .heart-slice {
+            --heart-color: hsl(var(--heart-hue), var(--heart-saturation), var(--heart-lightness));
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            top: 50%;
+            left: 50%;
+            margin-left: -50px;
+            margin-top: -50px;
+            background-color: var(--heart-color);
+        }
+
+        .heart-slice::before,
+        .heart-slice::after {
+            content: "";
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background: var(--heart-color);
+            border-radius: 50%;
+        }
+
+        .heart-slice::before {
+            top: -50px;
+            left: 0;
+        }
+
+        .heart-slice::after {
+            top: 0;
+            left: 50px;
+        }
+        
+        .text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(calc(-50% + 0.1cm), -50%) translateY(5px) translateZ(50px);
+            color: white;
+            font-size: 32px;
+            font-family: 'Sacramento', cursive;
+            text-shadow: 0 0 10px #ff1493, 0 0 20px #ff1493;
+            pointer-events: none;
+            animation: floatText 4s ease-in-out infinite;
+        }
+
+        @keyframes floatText {
+            0%, 100% {
+                transform: translate(calc(-50% + 0.1cm), -50%) translateY(5px) translateZ(50px);
+            }
+            50% {
+                transform: translate(calc(-50% + 0.1cm), -50%) translateY(-5px) translateZ(50px);
+            }
+        }
+
+        .back-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateX(-15px) translateZ(-70px) rotateY(180deg);
+            color: white;
+            font-size: 28px;
+            font-family: 'Sacramento', cursive;
+            text-shadow: 0 0 8px #ff1493, 0 0 15px #ff1493;
+            pointer-events: none;
+        }
+
+        /* Floating hearts */
+        .floating-heart {
+            position: absolute;
+            font-size: 20px;
+            opacity: 0;
+            animation: floatHeart 8s linear infinite;
+            z-index: 1;
+        }
+
+        @keyframes floatHeart {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.7;
+            }
+            90% {
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(-100px) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Fireworks particles */
+        .firework {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* Ambient light effect */
+        .ambient-light {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 80%, rgba(255, 20, 147, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255, 105, 180, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+            animation: ambientPulse 8s ease-in-out infinite;
+        }
+
+        @keyframes ambientPulse {
+            0%, 100% {
+                opacity: 0.3;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        /* Twinkling stars */
+        .star {
+            position: absolute;
+            background-color: white;
+            border-radius: 50%;
+            animation: twinkle 4s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        @keyframes twinkle {
+            0%, 100% {
+                opacity: 0.2;
+                transform: scale(0.8);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Ambient light effect -->
+    <div class="ambient-light"></div>
+
+    <div class="scene">
+        <div class="heart-container"></div>
+        <div class="text">Jormali</div>
+        <div class="back-text">Eres ❤️ Perfecta</div>
+    </div>
+
+    <!-- Container for floating hearts and effects -->
+    <div id="effects-container"></div>
+
+    <!-- Background Music -->
+    <audio id="bgMusic" loop>
+        <source src="data:audio/mpeg;base64,[TU_AUDIO_BASE64_AQUI]" type="audio/mpeg">
+    </audio>
+
+    <!-- Play button overlay (appears on first load) -->
+    <div id="playOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; cursor: pointer;">
+        <div style="text-align: center; color: white;">
+            <div style="font-size: 64px; margin-bottom: 20px;">🎵</div>
+            <div style="font-family: 'Sacramento', cursive; font-size: 32px; text-shadow: 0 0 10px #ff1493;">Haz clic para comenzar</div>
+        </div>
+    </div>
+
+    <script>
+        const heartContainer = document.querySelector('.heart-container');
+        const scene = document.querySelector('.scene');
+        const slices = 40;
+        const thickness = 40; // Total thickness of the heart in pixels
+
+        // Generate heart slices
+        for (let i = 0; i < slices; i++) {
+            const slice = document.createElement('div');
+            slice.classList.add('heart-slice');
+            
+            const zPos = (i - slices / 2) * (thickness / slices);
+            slice.style.transform = `rotate(-45deg) translateZ(${zPos}px)`;
+
+            // Create a lighting effect by varying HSL lightness
+            // Slices in the middle are brighter, edges are darker
+            const lightnessFactor = 0.6 - (Math.abs(i - slices / 2) / (slices / 2)) * 0.4;
+            const baseLightness = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--heart-lightness'));
+            
+            slice.style.setProperty('--heart-lightness', `${baseLightness * lightnessFactor}%`);
+            
+            heartContainer.appendChild(slice);
+        }
+
+        // Interactive controls
+        let rotationY = 0;
+        let rotationX = -15;
+        let scale = 1;
+        let isDragging = false;
+        let previousMouseX = 0;
+        let previousMouseY = 0;
+
+        function updateTransform() {
+            scene.style.transform = `scale(${scale}) rotateY(${rotationY}deg) rotateX(${rotationX}deg)`;
+        }
+
+        // Mouse drag to rotate
+        scene.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            previousMouseX = e.clientX;
+            previousMouseY = e.clientY;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaX = e.clientX - previousMouseX;
+                const deltaY = e.clientY - previousMouseY;
+                
+                rotationY += deltaX * 0.5;
+                rotationX -= deltaY * 0.5;
+                
+                previousMouseX = e.clientX;
+                previousMouseY = e.clientY;
+                
+                updateTransform();
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Mouse wheel to zoom
+        scene.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            
+            const zoomSpeed = 0.001;
+            scale -= e.deltaY * zoomSpeed;
+            
+            // Limit zoom range
+            scale = Math.max(0.3, Math.min(3, scale));
+            
+            updateTransform();
+        });
+
+        // Initialize transform
+        updateTransform();
+
+        // Background music control
+        const bgMusic = document.getElementById('bgMusic');
+        const playOverlay = document.getElementById('playOverlay');
+
+        playOverlay.addEventListener('click', () => {
+            bgMusic.play();
+            playOverlay.style.display = 'none';
+        });
+
+        // Set volume to a comfortable level
+        bgMusic.volume = 0.3;
+
+        // Visual effects
+        const effectsContainer = document.getElementById('effects-container');
+
+        // Create twinkling stars
+        function createStars() {
+            for (let i = 0; i < 30; i++) {
+                const star = document.createElement('div');
+                star.classList.add('star');
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.width = Math.random() * 3 + 1 + 'px';
+                star.style.height = star.style.width;
+                star.style.animationDelay = Math.random() * 4 + 's';
+                effectsContainer.appendChild(star);
+            }
+        }
+
+        // Create floating hearts
+        function createFloatingHeart() {
+            const heart = document.createElement('div');
+            heart.classList.add('floating-heart');
+            heart.innerHTML = '❤️';
+            heart.style.left = Math.random() * 100 + '%';
+            heart.style.color = ['#ff1493', '#ff69b4', '#ffb6c1', '#ffc0cb'][Math.floor(Math.random() * 4)];
+            heart.style.animationDelay = Math.random() * 2 + 's';
+            heart.style.fontSize = Math.random() * 15 + 15 + 'px';
+            effectsContainer.appendChild(heart);
+            
+            // Remove heart after animation completes
+            setTimeout(() => {
+                if (heart.parentNode) {
+                    heart.parentNode.removeChild(heart);
+                }
+            }, 8000);
+        }
+
+        // Create fireworks
+        function createFirework(x, y) {
+            const colors = ['#ff1493', '#ff69b4', '#ffd700', '#ffffff', '#ffb6c1'];
+            const particleCount = 30;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('firework');
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 3 + 2;
+                const vx = Math.cos(angle) * speed;
+                const vy = Math.sin(angle) * speed;
+                
+                effectsContainer.appendChild(particle);
+                
+                let opacity = 1;
+                const animateParticle = () => {
+                    const currentLeft = parseFloat(particle.style.left);
+                    const currentTop = parseFloat(particle.style.top);
+                    
+                    particle.style.left = (currentLeft + vx) + 'px';
+                    particle.style.top = (currentTop + vy) + 'px';
+                    opacity -= 0.02;
+                    particle.style.opacity = opacity;
+                    
+                    if (opacity > 0) {
+                        requestAnimationFrame(animateParticle);
+                    } else {
+                        if (particle.parentNode) {
+                            particle.parentNode.removeChild(particle);
+                        }
+                    }
+                };
+                
+                animateParticle();
+            }
+        }
+
+        // Random fireworks
+        function randomFirework() {
+            const x = Math.random() * window.innerWidth;
+            const y = Math.random() * window.innerHeight;
+            createFirework(x, y);
+        }
+
+        // Initialize effects
+        createStars();
+        
+        // Start floating hearts
+        setInterval(createFloatingHeart, 1000);
+        
+        // Start random fireworks
+        setInterval(randomFirework, 3000);
+
+        // Click to create fireworks
+        document.addEventListener('click', (e) => {
+            createFirework(e.clientX, e.clientY);
+        });
+    </script>
+</body>
+</html>
